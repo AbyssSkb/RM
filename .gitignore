@@ -1,5 +1,3 @@
-train/
-test/
-valid/
+dataset/
 .vscode/
 __pycache__/

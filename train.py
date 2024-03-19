@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
@@ -19,8 +20,11 @@ data_transforms = v2.Compose(
     ]
 )
 
-ds_train = MyDataset(image_folder='train', transform=data_transforms)
-ds_valid = MyDataset(image_folder='valid', transform=data_transforms)
+train_folder = os.path.join('dataset', 'train')
+valid_folder = os.path.join('dataset', 'valid')
+
+ds_train = MyDataset(image_folder=train_folder, transform=data_transforms)
+ds_valid = MyDataset(image_folder=valid_folder, transform=data_transforms)
 
 train_loader = DataLoader(ds_train, batch_size=Batch_size, shuffle=True)
 valid_loader = DataLoader(ds_valid, batch_size=Batch_size)
@@ -37,6 +41,7 @@ def main():
         model = model.cuda()
         criterion = criterion.cuda()
 
+    best_accuracy = 0
     for i in range(Epoch):
         print('Epoch: %d'%i)
 
@@ -56,7 +61,7 @@ def main():
             
             optimizer.zero_grad()
             output = model(input)
-            loss = criterion(output, label)
+            loss = criterion(output, label.long())
             loss.backward()
             optimizer.step()
             train_loss += loss.item() * input.shape[0]
@@ -77,7 +82,7 @@ def main():
                     label = label.cuda()
                 
                 output = model(input)
-                loss = criterion(output, label)
+                loss = criterion(output, label.long())
                 valid_loss += loss.item() * input.shape[0]
                 predict = torch.argmax(output, dim=1)
                 valid_accuracy += torch.sum(predict == label)
@@ -85,10 +90,14 @@ def main():
         # 打印一些基本信息
         print('Train Loss: %.1e' %(train_loss / ds_train.__len__()), 'Train Accuracy: %.3f' %(train_accuracy / ds_train.__len__()))
         print('Valid Loss: %.1e' %(valid_loss / ds_valid.__len__()), 'Valid Accuracy: %.3f' %(valid_accuracy / ds_valid.__len__()))
-        print('')
+        print()
 
-    # 保存
-    torch.save(model.state_dict(), 'model.pt')
+        # 保存模型
+        torch.save(model.state_dict(), 'latest.pt')
+        if best_accuracy < valid_accuracy:
+            best_accuracy = valid_accuracy
+            torch.save(model.state_dict(), 'best.pt')
+        
 
 if __name__ == '__main__':
     main()

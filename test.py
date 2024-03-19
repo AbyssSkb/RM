@@ -1,5 +1,5 @@
 import torch
-import numpy
+import os
 from torchvision.transforms import v2
 from thop import profile
 from MyDataset import MyDataset
@@ -15,11 +15,12 @@ data_transforms = v2.Compose(
     ]
 )
 
-ds_test = MyDataset(image_folder='test', transform=data_transforms)
+test_folder = os.path.join('dataset', 'test')
+ds_test = MyDataset(image_folder=test_folder, transform=data_transforms)
 test_loader = DataLoader(ds_test)
 
 model = ShuffleNetV2(n_class=12, input_size=100, width_mult=0.5)
-model.load_state_dict(torch.load('model.pt'))
+model.load_state_dict(torch.load('latest.pt'))
 model.eval()
 
 # 输出模型相关信息
@@ -28,6 +29,7 @@ flops, params = profile(model, inputs=(input, ))
 print('MFLOPs = ' + str(flops / 1000 ** 2))
 print('Params = ' + str(params / 1000 ** 2) + 'M')
 
+# 是否使用 GPU
 if GPU_Available:
     model = model.cuda()
 
@@ -50,7 +52,8 @@ def test():
 
             all += 1
 
-    print('incorrect: %d'%(sum), 'All: %d'%(all))
+    print('incorrect: %d'%(sum))
+    print('All: %d'%(all))
     print('Accuracy: %.3f'%((all - sum) / all))
 
 if __name__ == '__main__':
